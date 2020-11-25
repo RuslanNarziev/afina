@@ -15,19 +15,21 @@ void SimpleLRU::free_mem(size_t free_size) {
     _size += free_size;
 }
 
-void SimpleLRU::_add_node(const std::string& key, const std::string& value) {
+bool SimpleLRU::_add_node(const std::string& key, const std::string& value) {
     lru_node* cur_node = new lru_node{key, value, nullptr, nullptr};
     lru_node& node = *cur_node; 
     _lru_index.insert(std::pair<const std::string&, lru_node&>(cur_node->key, *cur_node));
     node.prev = nullptr;
     node.next = std::move(_lru_head);
-    node.next.get()->prev = cur_node;
+    if(node.next.get() != nullptr)
+        node.next.get()->prev = cur_node;
     _lru_head = std::move(std::unique_ptr<lru_node>(cur_node));
     free_mem(key.size() + value.size());
     node.value = value;
+    return true;
 }
 
-void SimpleLRU::_update_node(const std::string& key, const std::string& value, lru_node& node) {
+bool SimpleLRU::_update_node(const std::string& value, lru_node& node) {
     if(node.prev != nullptr) {
         lru_node* cur_node = node.prev->next.get();
         if(cur_node == _lru_end)
@@ -46,61 +48,37 @@ void SimpleLRU::_update_node(const std::string& key, const std::string& value, l
     else
         _size -= (node.value.size() - value.size());
     node.value = value;
+    return true;
 }
 
 bool SimpleLRU::Put(const std::string &key, const std::string &value) { 
     if(key.size() + value.size() > _max_size)
         return false;
-    if(_lru_head.get() == nullptr) {
-        lru_node* head = new lru_node{key, value, nullptr, nullptr};
-        _lru_index.insert(std::pair<const std::string&, lru_node&>(head->key, *head));
-        _lru_head.reset(head);
-        _lru_end = head;
-        _size = key.size() + value.size();
-        return true;
-    } 
     auto search = _lru_index.find(key);
     if(search != _lru_index.end())
-        _update_node(key, value, search->second.get());
-    else
-        _add_node(key, value);
-    return true; 
+        return _update_node(value, search->second.get());
+    return _add_node(key, value); 
 }
 
 bool SimpleLRU::Set(const std::string &key, const std::string &value) { 
     if(key.size() + value.size() > _max_size)
         return false;
-    if(_lru_head.get() == nullptr)
-        return false;
     auto search = _lru_index.find(key);
-    if(search != _lru_index.end()) {
-        _update_node(key, value, search->second.get());
-        return true;
-    }
+    if(search != _lru_index.end())
+        return _update_node(value, search->second.get());
     return false;
 }
 
 bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value) {
     if(key.size() + value.size() > _max_size)
         return false;
-    if(_lru_head.get() == nullptr) {
-        lru_node* head = new lru_node{key, value, nullptr, nullptr};
-        _lru_index.insert(std::pair<const std::string&, lru_node&>(head->key, *head));
-        _lru_head.reset(head);
-        _lru_end = head;
-        _size = key.size() + value.size();
-        return true;
-    } 
     auto search = _lru_index.find(key);
     if(search != _lru_index.end())
         return false;
-    _add_node(key, value);
-    return true;
+    return _add_node(key, value);
 }
 
 bool SimpleLRU::Delete(const std::string &key) {
-    if(_lru_head.get() == nullptr)
-        return false;
     auto search = _lru_index.find(key);
     if(search != _lru_index.end()) {
         lru_node& node = search->second.get();
@@ -131,14 +109,11 @@ bool SimpleLRU::Delete(const std::string &key) {
 }
 
 bool SimpleLRU::Get(const std::string &key, std::string &value) {
-    if(_lru_head.get() == nullptr)
-        return false;
     auto search = _lru_index.find(key);
     if(search != _lru_index.end()) {
         lru_node& node = search->second.get();
         value = node.value;
-        _update_node(key, value, node);
-        return true;
+        return _update_node(value, node);
     }
     return false;
 }

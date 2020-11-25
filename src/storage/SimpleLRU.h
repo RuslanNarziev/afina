@@ -41,6 +41,10 @@ public:
     bool Get(const std::string &key, std::string &value) override;
 
 private:
+    void free_mem(size_t);
+    bool _add_node(const std::string& key, const std::string& value);
+    bool _update_node(const std::string& value, lru_node& node);
+
     // LRU cache node
     using lru_node = struct lru_node {
         const std::string key;
@@ -63,10 +67,6 @@ private:
 
     // Index of nodes from list above, allows fast random access to elements by lru_node#key
     std::map<std::reference_wrapper<const std::string>, std::reference_wrapper<lru_node>, std::less<std::string>> _lru_index;
-
-    void free_mem(size_t);
-    void _add_node(const std::string& key, const std::string& value);
-    void _update_node(const std::string& key, const std::string& value, lru_node& node);
 };
 
 } // namespace Backend
