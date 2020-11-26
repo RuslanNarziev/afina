@@ -41,10 +41,6 @@ public:
     bool Get(const std::string &key, std::string &value) override;
 
 private:
-    void free_mem(size_t);
-    bool _add_node(const std::string& key, const std::string& value);
-    bool _update_node(const std::string& value, lru_node& node);
-
     // LRU cache node
     using lru_node = struct lru_node {
         const std::string key;
@@ -52,6 +48,10 @@ private:
         lru_node* prev;
         std::unique_ptr<lru_node> next;
     };
+
+    void free_mem(size_t);
+    bool _add_node(const std::string& key, const std::string& value);
+    bool _update_node(const std::string& value, lru_node& node);
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size

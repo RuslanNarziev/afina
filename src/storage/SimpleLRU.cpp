@@ -23,6 +23,8 @@ bool SimpleLRU::_add_node(const std::string& key, const std::string& value) {
     node.next = std::move(_lru_head);
     if(node.next.get() != nullptr)
         node.next.get()->prev = cur_node;
+    else
+        _lru_end = cur_node;
     _lru_head = std::move(std::unique_ptr<lru_node>(cur_node));
     free_mem(key.size() + value.size());
     node.value = value;
@@ -121,4 +123,3 @@ bool SimpleLRU::Get(const std::string &key, std::string &value) {
 
 } // namespace Backend
 } // namespace Afina
-
